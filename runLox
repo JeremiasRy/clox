@@ -1,0 +1,6 @@
+#!/bin/bash
+
+make
+echo "== Build success! =="
+./clox
+make clean
