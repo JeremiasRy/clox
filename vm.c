@@ -1,5 +1,6 @@
 #include "vm.h"
 #include "debug.h"
+#include "compiler.h"
 #include <stdio.h>
 
 VM vm;
@@ -16,12 +17,6 @@ void initVM()
 
 void freeVM()
 {
-}
-
-InterpretResult interpret(const char *source)
-{
-    compile(source);
-    return INTERPRET_OK;
 }
 
 static InterpretResult run()
@@ -106,6 +101,27 @@ static InterpretResult run()
 #undef READ_CONSTANT
 #undef READ_CONSTANT_LONG
 #undef BINARY_OP
+}
+
+InterpretResult interpret(const char *source)
+{
+    printf("We received input: %s\n", source);
+    Chunk chunk;
+    initChunk(&chunk);
+
+    if (!compile(source, &chunk))
+    {
+        freeChunk(&chunk);
+        return INTERPRET_COMPILE_ERROR;
+    }
+
+    vm.chunk = &chunk;
+    vm.ip = vm.chunk->code;
+
+    InterpretResult result = run();
+
+    freeChunk(&chunk);
+    return result;
 }
 
 void push(Value value)

@@ -22,16 +22,18 @@ void initScanner(const char *source)
 
 static bool isAtEnd()
 {
-    return scanner.current == '\0';
+    return *scanner.current == '\0';
 }
 
 static Token makeToken(TokenType type)
 {
+    printf("make token %d \n", type);
     Token token;
     token.type = type;
     token.start = scanner.start;
     token.length = (int)(scanner.current - scanner.start);
     token.line = scanner.line;
+    printf("no errors?\n");
     return token;
 }
 
@@ -43,6 +45,26 @@ static Token errorToken(const char *message)
     token.length = (int)strlen(message);
     token.line = scanner.line;
     return token;
+}
+
+static char peek()
+{
+    return *scanner.current;
+}
+
+static char peekNext()
+{
+    if (isAtEnd())
+    {
+        return '\0';
+    }
+    return scanner.current[1];
+}
+
+static char advance()
+{
+    scanner.current++;
+    return scanner.current[-1];
 }
 
 static bool match(char expected)
@@ -69,6 +91,7 @@ static void skipWhitespace()
         case ' ':
         case '\r':
         case '\t':
+            printf("we advance\n");
             advance();
             break;
         case '/':
@@ -158,20 +181,6 @@ static TokenType identifierType()
     return TOKEN_IDENTIFIER;
 }
 
-static char peek()
-{
-    return *scanner.current;
-}
-
-static char peekNext()
-{
-    if (isAtEnd())
-    {
-        return '\0';
-    }
-    return scanner.current[1];
-}
-
 static Token string()
 {
     while (peek() != '"' && !isAtEnd())
@@ -190,6 +199,17 @@ static Token string()
 
     advance();
     return makeToken(TOKEN_STRING);
+}
+
+static bool isDigit(char c)
+{
+    return c >= '0' && c <= '9';
+}
+static bool isAlpha(char c)
+{
+    return (c >= 'a' && c <= 'z') ||
+           (c >= 'A' && c <= 'Z') ||
+           (c == '_');
 }
 
 static Token number()
@@ -221,23 +241,12 @@ static Token identifier()
     return makeToken(identifierType());
 }
 
-static bool isDigit(char c)
-{
-    return c >= '0' && c <= '9';
-}
-
-static bool isAlpha(char c)
-{
-    return (c >= 'a' && c <= 'z') ||
-           (c >= 'A' && c <= 'Z') ||
-           (c == '_');
-}
-
 Token scanToken()
 {
+    skipWhitespace();
     scanner.start = scanner.current;
-
-    if (isAstEnd())
+    printf("scantoken \n");
+    if (isAtEnd())
     {
         return makeToken(TOKEN_EOF);
     }
@@ -251,6 +260,7 @@ Token scanToken()
 
     if (isDigit(c))
     {
+        printf("is digit\n");
         return number();
     }
     switch (c)
@@ -272,6 +282,7 @@ Token scanToken()
     case '-':
         return makeToken(TOKEN_MINUS);
     case '+':
+        printf("token plus\n");
         return makeToken(TOKEN_PLUS);
     case '/':
         return makeToken(TOKEN_SLASH);
