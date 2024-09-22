@@ -16,21 +16,6 @@ typedef struct
     bool panickMode;
 } Parser;
 
-typedef enum
-{
-    PREC_NONE,
-    PREC_ASSIGNMENT,
-    PREC_OR,
-    PREC_AND,
-    PREC_EQUALITY,
-    PREC_COMPARISON,
-    PREC_TERM,
-    PREC_FACTOR,
-    PREC_UNARY,
-    PREC_CALL,
-    PREC_PRIMARY
-} Precedence;
-
 typedef void (*ParseFn)();
 
 typedef struct
@@ -39,6 +24,37 @@ typedef struct
     ParseFn infix;
     Precedence precedence;
 } ParseRule;
+
+const char *getPrecedenceName(Precedence precedence)
+{
+    switch (precedence)
+    {
+    case PREC_NONE:
+        return "PREC_NONE";
+    case PREC_ASSIGNMENT:
+        return "PREC_ASSIGNMENT";
+    case PREC_OR:
+        return "PREC_OR";
+    case PREC_AND:
+        return "PREC_AND";
+    case PREC_EQUALITY:
+        return "PREC_EQUALITY";
+    case PREC_COMPARISON:
+        return "PREC_COMPARISON";
+    case PREC_TERM:
+        return "PREC_TERM";
+    case PREC_FACTOR:
+        return "PREC_FACTOR";
+    case PREC_UNARY:
+        return "PREC_UNARY";
+    case PREC_CALL:
+        return "PREC_CALL";
+    case PREC_PRIMARY:
+        return "PREC_PRIMARY";
+    default:
+        return "UNKNOWN_PREC";
+    }
+}
 
 Parser parser;
 Chunk *compilingChunk;
@@ -52,10 +68,8 @@ static void errorAt(Token *token, const char *message)
 {
     if (parser.panickMode)
     {
-        printf("panicking\n");
         return;
     }
-    printf("We arrived at error\n");
     parser.panickMode = true;
     fprintf(stderr, "[line %d] Error", token->line);
 
@@ -65,6 +79,7 @@ static void errorAt(Token *token, const char *message)
     }
     else if (token->type == TOKEN_ERROR)
     {
+        fprintf(stderr, " error token\n");
     }
     else
     {
@@ -84,7 +99,8 @@ static void errorAtCurrent(const char *message)
 
 static void advance()
 {
-    printf("advance\n");
+    printf("compiler advance()\n");
+    printf("previous: %s current: %s\n", getTokenTypeName(parser.previous.type), getTokenTypeName(parser.current.type));
     parser.previous = parser.current;
 
     for (;;)
@@ -94,9 +110,10 @@ static void advance()
         {
             break;
         }
-        printf("we are erroring hard\n");
         errorAtCurrent(parser.current.start);
     }
+    printf("after scan\n");
+    printf("previous: %s current: %s\n", getTokenTypeName(parser.previous.type), getTokenTypeName(parser.current.type));
 }
 
 static void consume(TokenType type, const char *message)
@@ -209,6 +226,7 @@ static void unary()
 }
 static void grouping()
 {
+    printf("grouping()\n");
     expression();
     consume(TOKEN_RIGHT_PAREN, "Expect ')' after expression.");
 }
@@ -257,17 +275,14 @@ ParseRule rules[] = {
 };
 static void parsePrecedence(Precedence precedence)
 {
-    printf("parse precedence\n");
+    printf("parsePrecedence, precedence: %s \n", getPrecedenceName(precedence));
     advance();
     ParseFn prefixRule = getRule(parser.previous.type)->prefix;
-    printf("we got a prefixRule, %d \n", prefixRule);
     if (prefixRule == NULL)
     {
-        printf("was null\n");
         error("Expect expression.");
         return;
     }
-    printf("We should call the rule()\n");
     prefixRule();
 
     while (precedence <= getRule(parser.current.type)->precedence)
@@ -280,20 +295,19 @@ static void parsePrecedence(Precedence precedence)
 
 static ParseRule *getRule(TokenType type)
 {
-    printf("get rule for type: %d \n", type);
+    printf("getRule() type: %s \n", getTokenTypeName(type));
     return &rules[type];
 }
 
 static void expression()
 {
+    printf("expression()\n");
     parsePrecedence(PREC_ASSIGNMENT);
 }
 
 bool compile(const char *source, Chunk *chunk)
 {
-    printf("We arrived at compiler!\n");
     initScanner(source);
-    printf("we init scanner \n");
     compilingChunk = chunk;
 
     parser.hadError = false;
