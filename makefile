@@ -2,8 +2,8 @@ CC = gcc
 CFLAGS = -Wall -g
 TARGET = clox
 
-SRCS = main.c chunk.c memory.c debug.c value.c rle.c vm.c compiler.c scanner.c 
-OBJS = main.o chunk.o memory.o debug.o value.o rle.o vm.o compiler.o scanner.o
+SRCS = main.c chunk.c memory.c debug.c value.c rle.c vm.c compiler.c scanner.c object.c 
+OBJS = main.o chunk.o memory.o debug.o value.o rle.o vm.o compiler.o scanner.o object.o
 
 # Rule to build the final executable
 $(TARGET): $(OBJS)

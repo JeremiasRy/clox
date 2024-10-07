@@ -2,6 +2,8 @@
 #define clox_compiler_h
 
 #include "vm.h"
+#include "object.h"
+
 typedef enum
 {
     PREC_NONE,
