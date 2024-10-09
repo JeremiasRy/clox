@@ -36,7 +36,7 @@ void writeChunk(Chunk *chunk, uint8_t byte, int line)
 void writeConstant(Chunk *chunk, Value value, int line)
 {
     int operand = addConstant(chunk, value);
-    if (operand > 255)
+    if (operand >= 1 << 8)
     {
         writeChunk(chunk, OP_CONSTANT_LONG, line);
         writeChunk(chunk, operand & 0xFF, line);
