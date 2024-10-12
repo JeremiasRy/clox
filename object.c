@@ -38,6 +38,7 @@ static uint32_t hashString(const char *key, int length)
     }
     return hash;
 }
+
 ObjString *takeString(char *chars, int length)
 {
     uint32_t hash = hashString(chars, length);
