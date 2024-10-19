@@ -29,6 +29,8 @@ struct ObjString
     char *chars;
     uint32_t hash;
 };
+
+uint32_t hashKey(Key *key);
 ObjString *takeString(char *chars, int length);
 ObjString *copyString(const char *chars, int length);
 void printObject(Value value);

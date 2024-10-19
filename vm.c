@@ -58,6 +58,7 @@ void initVM()
 {
     resetStack();
     vm.objects = NULL;
+    initTable(&vm.strings);
 }
 
 void freeVM()
