@@ -2,5 +2,5 @@
 
 make
 echo "== Build success! =="
-./clox jau.lox
+valgrind --show-leak-kinds=all ./clox jau.lox
 make clean

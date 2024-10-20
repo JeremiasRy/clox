@@ -3,7 +3,8 @@
 
 #include "common.h"
 #include "value.h"
-#include "object.h"
+
+struct ObjString;
 
 typedef enum
 {
@@ -15,19 +16,19 @@ typedef enum
 
 typedef struct
 {
-    Key *key;
-    Value value;
-} Entry;
-
-typedef struct
-{
     KeyType type;
     union
     {
         ObjString *string;
-        Value val
-    } *key;
+        Value *val;
+    } value;
 } Key;
+
+typedef struct
+{
+    Key *key;
+    Value value;
+} Entry;
 
 typedef struct
 {

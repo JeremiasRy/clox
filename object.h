@@ -3,6 +3,7 @@
 
 #include "common.h"
 #include "value.h"
+#include "table.h"
 
 #define OBJ_TYPE(value) (AS_OBJ(value)->type)
 

@@ -1,37 +1,14 @@
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 
 #include "object.h"
 #include "memory.h"
-#include "table.h"
 #include "value.h"
 #include "vm.h"
 
 #define ALLOCATE_OBJ(type, objectType) \
     (type *)allocateObject(sizeof(type), objectType)
-
-uint32_t hashKey(Key *key)
-{
-    switch (key->type)
-    {
-    case KEY_BOOL:
-    {
-        return AS_BOOL(key->key->val) ? hashNumber(1) : hashNumber(0);
-    }
-    case KEY_NIL:
-    {
-        return hashNumber(2);
-    }
-    case KEY_NUMBER:
-    {
-        return hashNumber(AS_NUMBER(key->key->val));
-    }
-    case KEY_STRING:
-    {
-        return hashString(key->key->string->chars, key->key->string->length);
-    }
-    }
-}
 
 static Obj *allocateObject(size_t size, ObjType type)
 {
@@ -49,7 +26,11 @@ static ObjString *allocateString(char *chars, int length, uint32_t hash)
     string->length = length;
     string->chars = chars;
     string->hash = hash;
-    tableSet(&vm.strings, string, NIL_VAL);
+
+    Key *key = ALLOCATE(Key, 1);
+    key->type = KEY_STRING;
+    key->value.string = string;
+    tableSet(&vm.strings, key, NIL_VAL);
     return string;
 }
 
@@ -80,6 +61,32 @@ static uint32_t hashNumber(double number)
     hash *= 16777619;
 
     return hash;
+}
+
+uint32_t hashKey(Key *key)
+{
+    switch (key->type)
+    {
+    case KEY_BOOL:
+    {
+        return key->value.val->as.boolean ? hashNumber(1) : hashNumber(0);
+    }
+    case KEY_NIL:
+    {
+        return hashNumber(2);
+    }
+    case KEY_NUMBER:
+    {
+        return hashNumber(key->value.val->as.number);
+    }
+    case KEY_STRING:
+    {
+        return hashString(key->value.string->chars, key->value.string->length);
+    }
+    default:
+        // unreachable (I hope)
+        return 0;
+    }
 }
 
 ObjString *takeString(char *chars, int length)

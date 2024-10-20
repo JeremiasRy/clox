@@ -21,17 +21,23 @@ void freeTable(Table *table)
     initTable(table);
 }
 
-bool tableGet(Table *table, Key *key, Value *value)
+static compareKeys(Key *a, Key *b)
 {
-    if (table->count == 0)
-        return false;
-
-    Entry *entry = findEntry(table->entries, table->capacity, key);
-    if (entry->key == NULL)
-        return false;
-
-    *value = entry->value;
-    return true;
+    switch (a->type)
+    {
+    case KEY_STRING:
+    {
+        return a->value.string->hash == b->value.string->hash &&
+               a->value.string->length == b->value.string->length &&
+               memcmp(a->value.string->chars, b->value.string->chars, a->value.string->length) == 0;
+    }
+    case KEY_NIL:
+    case KEY_BOOL:
+    case KEY_NUMBER:
+    {
+        return hashKey(a) == hashKey(b);
+    }
+    }
 }
 
 static Entry *findEntry(Entry *entries, int capacity, Key *key)
@@ -55,7 +61,7 @@ static Entry *findEntry(Entry *entries, int capacity, Key *key)
                 }
             }
         }
-        else if (entry->key == key)
+        else if (compareKeys(entry->key, key))
         {
             return entry;
         }
@@ -67,26 +73,48 @@ static Entry *findEntry(Entry *entries, int capacity, Key *key)
 static void adjustCapacity(Table *table, int capacity)
 {
     Entry *entries = ALLOCATE(Entry, capacity);
+
     for (int i = 0; i < capacity; i++)
     {
         entries[i].key = NULL;
         entries[i].value = NIL_VAL;
     }
-    table->count = 0;
-    for (int i = 0; i < capacity; i++)
-    {
-        Entry *entry = &table->entries[i];
-        if (entry->key == NULL)
-            continue;
 
-        Entry *dest = findEntry(entries, capacity, entry->key);
-        dest->key = entry->key;
-        dest->value = entry->value;
-        table->count++;
+    table->count = 0;
+
+    if (table->entries != NULL)
+    {
+        for (int i = 0; i < table->capacity; i++)
+        {
+            Entry *entry = &table->entries[i];
+            if (entry->key == NULL)
+            {
+                continue;
+            }
+
+            Entry *dest = findEntry(entries, capacity, entry->key);
+            dest->key = entry->key;
+            dest->value = entry->value;
+            table->count++;
+        }
+        FREE_ARRAY(Entry, table->entries, table->capacity);
     }
-    FREE_ARRAY(Entry, table->entries, table->capacity);
+
     table->entries = entries;
     table->capacity = capacity;
+}
+
+bool tableGet(Table *table, Key *key, Value *value)
+{
+    if (table->count == 0)
+        return false;
+
+    Entry *entry = findEntry(table->entries, table->capacity, key);
+    if (entry->key == NULL)
+        return false;
+
+    *value = entry->value;
+    return true;
 }
 
 bool tableSet(Table *table, Key *key, Value value)
@@ -154,9 +182,9 @@ ObjString *tableFindString(Table *table, const char *chars, int length, uint32_t
                 return NULL;
             }
         }
-        else if (entry->key->length == length && entry->key->hash == hash && memcmp(entry->key->chars, chars, length) == 0)
+        else if (entry->key->value.string->length == length && entry->key->value.string->hash == hash && memcmp(entry->key->value.string->chars, chars, length) == 0)
         {
-            return entry->key;
+            return entry->key->value.string;
         }
         index = (index + 1) % table->capacity;
     }
