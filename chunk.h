@@ -21,6 +21,7 @@ typedef enum
     OP_DIVIDE,
     OP_NOT,
     OP_SUBSTRACT,
+    OP_PRINT,
     OP_RETURN,
 } OpCode;
 
