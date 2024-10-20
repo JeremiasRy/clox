@@ -184,6 +184,7 @@ ObjString *tableFindString(Table *table, const char *chars, int length, uint32_t
         }
         else if (entry->key->value.string->length == length && entry->key->value.string->hash == hash && memcmp(entry->key->value.string->chars, chars, length) == 0)
         {
+            printf("#### %s\n", entry->key->value.string->chars);
             return entry->key->value.string;
         }
         index = (index + 1) % table->capacity;

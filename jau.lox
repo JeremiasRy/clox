@@ -1,3 +1,11 @@
-print "string" + " " + "another string";
-print 1 + 2;
-print 1 - 4 * 4;
+var beverage = "cafe au lait";
+var breakfast = "beighnets with " + beverage;
+var hello = "hello";
+var three = 2 + 1;
+var four = three + 1;
+var five = four + 1;
+var six = five + 1;
+var seven = six + 1;
+var holyCrap = "readjust";
+
+print holyCrap;
