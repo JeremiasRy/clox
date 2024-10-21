@@ -160,7 +160,6 @@ static char peekNext()
 
 static char advance()
 {
-    printf("scanner advance()\n");
     scanner.current++;
     return scanner.current[-1];
 }
@@ -355,8 +354,6 @@ Token scanToken()
     }
 
     char c = advance();
-
-    printf("scanToken() c = %c\n", c);
 
     if (isAlpha(c))
     {

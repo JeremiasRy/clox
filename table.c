@@ -21,14 +21,14 @@ void freeTable(Table *table)
     initTable(table);
 }
 
-static compareKeys(Key *a, Key *b)
+static bool compareKeys(Key *a, Key *b)
 {
     switch (a->type)
     {
     case KEY_STRING:
     {
-        return a->value.string->hash == b->value.string->hash &&
-               a->value.string->length == b->value.string->length &&
+        return a->value.string->length == b->value.string->length &&
+               a->value.string->hash == b->value.string->hash &&
                memcmp(a->value.string->chars, b->value.string->chars, a->value.string->length) == 0;
     }
     case KEY_NIL:
@@ -184,7 +184,6 @@ ObjString *tableFindString(Table *table, const char *chars, int length, uint32_t
         }
         else if (entry->key->value.string->length == length && entry->key->value.string->hash == hash && memcmp(entry->key->value.string->chars, chars, length) == 0)
         {
-            printf("#### %s\n", entry->key->value.string->chars);
             return entry->key->value.string;
         }
         index = (index + 1) % table->capacity;

@@ -121,6 +121,7 @@ static InterpretResult run()
             Key *key = ALLOCATE(Key, 1);
             key->type = KEY_STRING;
             key->value.string = name;
+            key->value.string->hash = hashKey(key);
             Value value;
             if (!tableGet(&vm.globals, key, &value))
             {
@@ -128,7 +129,22 @@ static InterpretResult run()
                 return INTERPRET_RUNTIME_ERROR;
             }
             push(value);
-            FREE(Key, key);
+            break;
+        }
+        case OP_SET_GLOBAL:
+        {
+            ObjString *name = READ_STRING();
+            Key *key = ALLOCATE(Key, 1);
+            key->type = KEY_STRING;
+            key->value.string = name;
+            key->value.string->hash = hashKey(key);
+
+            if (tableSet(&vm.globals, key, peek(0)))
+            {
+                tableDelete(&vm.globals, key);
+                runtimeError("Undefined variable '%s'.", name->chars);
+                return INTERPRET_RUNTIME_ERROR;
+            }
             break;
         }
         case OP_DEFINE_GLOBAL:
@@ -137,6 +153,7 @@ static InterpretResult run()
             Key *key = ALLOCATE(Key, 1);
             key->type = KEY_STRING;
             key->value.string = name;
+            key->value.string->hash = hashKey(key);
             tableSet(&vm.globals, key, peek(0));
             pop();
             break;

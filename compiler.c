@@ -16,7 +16,22 @@ typedef struct
     bool panickMode;
 } Parser;
 
-typedef void (*ParseFn)();
+typedef enum
+{
+    PREC_NONE,
+    PREC_ASSIGNMENT,
+    PREC_OR,
+    PREC_AND,
+    PREC_EQUALITY,
+    PREC_COMPARISON,
+    PREC_TERM,
+    PREC_FACTOR,
+    PREC_UNARY,
+    PREC_CALL,
+    PREC_PRIMARY
+} Precedence;
+
+typedef void (*ParseFn)(bool canAssign);
 
 typedef struct
 {
@@ -99,10 +114,7 @@ static void errorAtCurrent(const char *message)
 
 static void advance()
 {
-    printf("compiler advance()\n");
-    printf("previous: %s current: %s\n", getTokenTypeName(parser.previous.type), getTokenTypeName(parser.current.type));
     parser.previous = parser.current;
-
     for (;;)
     {
         parser.current = scanToken();
@@ -112,8 +124,6 @@ static void advance()
         }
         errorAtCurrent(parser.current.start);
     }
-    printf("after scan\n");
-    printf("previous: %s current: %s\n", getTokenTypeName(parser.previous.type), getTokenTypeName(parser.current.type));
 }
 
 static void consume(TokenType type, const char *message)
@@ -144,7 +154,6 @@ static bool match(TokenType type)
 
 static void emitByte(uint8_t byte)
 {
-    printf("Emitting byte %d \n", byte);
     writeChunk(currentChunk(), byte, parser.previous.line);
 }
 
@@ -209,9 +218,8 @@ static void defineVariable(uint8_t global)
     emitBytes(OP_DEFINE_GLOBAL, global);
 }
 
-static void binary()
+static void binary(bool canAssign)
 {
-    printf("binary() \n");
     TokenType operatorType = parser.previous.type;
     ParseRule *rule = getRule(operatorType);
     parsePrecedence((Precedence)(rule->precedence + 1));
@@ -253,7 +261,7 @@ static void binary()
     }
 }
 
-static void literal()
+static void literal(bool canAssign)
 {
     switch (parser.previous.type)
     {
@@ -271,32 +279,38 @@ static void literal()
     }
 }
 
-static void number()
+static void number(bool canAssign)
 {
     double value = strtod(parser.previous.start, NULL);
     emitConstant(NUMBER_VAL(value));
 }
 
-static void string()
+static void string(bool canAssign)
 {
-    printf("string\n");
     emitConstant(OBJ_VAL(copyString(parser.previous.start + 1, parser.previous.length - 2)));
 }
 
-static void namedVariable(Token name)
+static void namedVariable(Token name, bool canAssign)
 {
     uint8_t arg = identifierConstant(&name);
-    emitBytes(OP_GET_GLOBAL, arg);
+    if (canAssign && match(TOKEN_EQUAL))
+    {
+        expression();
+        emitBytes(OP_SET_GLOBAL, arg);
+    }
+    else
+    {
+        emitBytes(OP_GET_GLOBAL, arg);
+    }
 }
 
-static void variable()
+static void variable(bool canAssign)
 {
-    namedVariable(parser.previous);
+    namedVariable(parser.previous, canAssign);
 }
 
-static void unary()
+static void unary(bool canAssign)
 {
-    printf("unary() \n");
     TokenType operatorType = parser.previous.type;
 
     parsePrecedence(PREC_UNARY);
@@ -315,9 +329,8 @@ static void unary()
         return;
     }
 }
-static void grouping()
+static void grouping(bool canAssign)
 {
-    printf("grouping()\n");
     expression();
     consume(TOKEN_RIGHT_PAREN, "Expect ')' after expression.");
 }
@@ -367,9 +380,7 @@ ParseRule rules[] = {
 
 static void parsePrecedence(Precedence precedence)
 {
-    printf("parsePrecedence, precedence: %s \n", getPrecedenceName(precedence));
     advance();
-    printf("before prefix\n");
     ParseFn prefixRule = getRule(parser.previous.type)->prefix;
 
     if (prefixRule == NULL)
@@ -377,25 +388,29 @@ static void parsePrecedence(Precedence precedence)
         error("Expect expression.");
         return;
     }
-    prefixRule();
+    bool canAssign = precedence <= PREC_ASSIGNMENT;
+    prefixRule(canAssign);
 
     while (precedence <= getRule(parser.current.type)->precedence)
     {
         advance();
         ParseFn infixRule = getRule(parser.previous.type)->infix;
-        infixRule();
+        infixRule(canAssign);
+    }
+
+    if (canAssign && match(TOKEN_EQUAL))
+    {
+        error("Invalid assignment target.");
     }
 }
 
 static ParseRule *getRule(TokenType type)
 {
-    printf("getRule() type: %s \n", getTokenTypeName(type));
     return &rules[type];
 }
 
 static void expression()
 {
-    printf("expression()\n");
     parsePrecedence(PREC_ASSIGNMENT);
 }
 
