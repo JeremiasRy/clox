@@ -31,7 +31,7 @@ struct ObjString
     uint32_t hash;
 };
 
-uint32_t hashKey(Key *key);
+uint32_t hashKey(ObjString *key);
 ObjString *takeString(char *chars, int length);
 ObjString *copyString(const char *chars, int length);
 void printObject(Value value);

@@ -21,28 +21,16 @@ void freeTable(Table *table)
     initTable(table);
 }
 
-static bool compareKeys(Key *a, Key *b)
+static bool compareKeys(ObjString *a, ObjString *b)
 {
-    switch (a->type)
-    {
-    case KEY_STRING:
-    {
-        return a->value.string->length == b->value.string->length &&
-               a->value.string->hash == b->value.string->hash &&
-               memcmp(a->value.string->chars, b->value.string->chars, a->value.string->length) == 0;
-    }
-    case KEY_NIL:
-    case KEY_BOOL:
-    case KEY_NUMBER:
-    {
-        return hashKey(a) == hashKey(b);
-    }
-    }
+    return a->length == b->length &&
+           a->hash == b->hash &&
+           memcmp(a->chars, b->chars, a->length) == 0;
 }
 
-static Entry *findEntry(Entry *entries, int capacity, Key *key)
+static Entry *findEntry(Entry *entries, int capacity, ObjString *key)
 {
-    uint32_t index = hashKey(key) % capacity;
+    uint32_t index = key->hash % capacity;
     Entry *tombstone = NULL;
     for (;;)
     {
@@ -104,7 +92,7 @@ static void adjustCapacity(Table *table, int capacity)
     table->capacity = capacity;
 }
 
-bool tableGet(Table *table, Key *key, Value *value)
+bool tableGet(Table *table, ObjString *key, Value *value)
 {
     if (table->count == 0)
         return false;
@@ -117,7 +105,7 @@ bool tableGet(Table *table, Key *key, Value *value)
     return true;
 }
 
-bool tableSet(Table *table, Key *key, Value value)
+bool tableSet(Table *table, ObjString *key, Value value)
 {
     if (table->count + 1 > table->capacity * TABLE_MAX_LOAD)
     {
@@ -134,7 +122,7 @@ bool tableSet(Table *table, Key *key, Value value)
     return isNewKey;
 }
 
-bool tableDelete(Table *table, Key *key)
+bool tableDelete(Table *table, ObjString *key)
 {
     if (table->count == 0)
     {
@@ -182,7 +170,7 @@ ObjString *tableFindString(Table *table, const char *chars, int length, uint32_t
                 return NULL;
             }
         }
-        else if (entry->key->value.string->length == length && entry->key->value.string->hash == hash && memcmp(entry->key->value.string->chars, chars, length) == 0)
+        else if (entry->key->length == length && entry->key->hash == hash && memcmp(entry->key->chars, chars, length) == 0)
         {
             return entry->key;
         }

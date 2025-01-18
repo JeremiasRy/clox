@@ -58,8 +58,8 @@ void initVM()
 {
     resetStack();
     vm.objects = NULL;
-    initTable(&vm.strings);
     initTable(&vm.globals);
+    initTable(&vm.strings);
 }
 
 void freeVM()
@@ -76,7 +76,7 @@ static InterpretResult run()
 #define READ_CONSTANT_LONG() \
     (vm.chunk->constants.values[(READ_BYTE()) | (READ_BYTE() << 8) | (READ_BYTE() << 16)])
 #define READ_SHORT() \
-    (vm.ip += 2, (uint16_t)((vm.ip[-2] << 8 | vm.ip[-1])))
+    (vm.ip += 2, (uint16_t)((vm.ip[-2] << 8) | vm.ip[-1]))
 #define READ_STRING() AS_STRING(READ_CONSTANT())
 #define BINARY_OP(valueType, op)                        \
     do                                                  \
@@ -86,8 +86,8 @@ static InterpretResult run()
             runtimeError("Operands must be numbers.");  \
             return INTERPRET_RUNTIME_ERROR;             \
         }                                               \
-        double a = AS_NUMBER(pop());                    \
         double b = AS_NUMBER(pop());                    \
+        double a = AS_NUMBER(pop());                    \
         push(valueType(a op b));                        \
     } while (false)
 
@@ -104,6 +104,7 @@ static InterpretResult run()
         printf("\n");
         disassembleInstruction(vm.chunk, (int)(vm.ip - vm.chunk->code));
 #endif
+
         uint8_t instruction;
         switch (instruction = READ_BYTE())
         {
@@ -131,12 +132,8 @@ static InterpretResult run()
         case OP_GET_GLOBAL:
         {
             ObjString *name = READ_STRING();
-            Key *key = ALLOCATE(Key, 1);
-            key->type = KEY_STRING;
-            key->value.string = name;
-            key->value.string->hash = hashKey(key);
             Value value;
-            if (!tableGet(&vm.globals, key, &value))
+            if (!tableGet(&vm.globals, name, &value))
             {
                 runtimeError("Undefined variable '%s'", name->chars);
                 return INTERPRET_RUNTIME_ERROR;
@@ -147,14 +144,9 @@ static InterpretResult run()
         case OP_SET_GLOBAL:
         {
             ObjString *name = READ_STRING();
-            Key *key = ALLOCATE(Key, 1);
-            key->type = KEY_STRING;
-            key->value.string = name;
-            key->value.string->hash = hashKey(key);
-
-            if (tableSet(&vm.globals, key, peek(0)))
+            if (tableSet(&vm.globals, name, peek(0)))
             {
-                tableDelete(&vm.globals, key);
+                tableDelete(&vm.globals, name);
                 runtimeError("Undefined variable '%s'.", name->chars);
                 return INTERPRET_RUNTIME_ERROR;
             }
@@ -163,11 +155,7 @@ static InterpretResult run()
         case OP_DEFINE_GLOBAL:
         {
             ObjString *name = READ_STRING();
-            Key *key = ALLOCATE(Key, 1);
-            key->type = KEY_STRING;
-            key->value.string = name;
-            key->value.string->hash = hashKey(key);
-            tableSet(&vm.globals, key, peek(0));
+            tableSet(&vm.globals, name, peek(0));
             pop();
             break;
         }
@@ -216,6 +204,7 @@ static InterpretResult run()
         case OP_LESS:
         {
             BINARY_OP(BOOL_VAL, <);
+            break;
         }
         case OP_DIVIDE:
         {
@@ -267,6 +256,12 @@ static InterpretResult run()
         {
             printValue(pop());
             printf("\n");
+            break;
+        }
+        case OP_LOOP:
+        {
+            uint16_t offset = READ_SHORT();
+            vm.ip -= offset;
             break;
         }
         case OP_JUMP:
