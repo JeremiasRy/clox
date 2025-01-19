@@ -1,3 +1,37 @@
-for (var i = 0; i < 10000; i = i + 1) {
-    print "Loop";
+switch (100) {
+    case 1: {
+        print "1";
+    }
+    case 2: {
+        print "2";
+    }
+    default: {
+        print "IT wasnt 1 or 2";
+    }
+};
+
+switch (1020) {
+    case 1: {
+        print "1";
+    }
+    case 2: {
+        print "2";
+    }
+    case 1020: {
+        print "HAHA we got it";
+    }
+    default: {
+        print "IT wasnt 1 or 2";
+    }
+};
+
+var hello = "hello";
+
+switch (hello) {
+    case "hello": {
+        print "Hello World!";
+    }
+    case 4534: {
+        print "We shouldn't hit this";
+    }
 }

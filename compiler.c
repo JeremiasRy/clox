@@ -706,6 +706,84 @@ static void ifStatement()
     patchJump(elseJump);
 }
 
+typedef struct
+{
+    int count;
+    int capacity;
+    int *values;
+} IntArray;
+
+static void initIntArray(IntArray *arr)
+{
+    arr->count = 0;
+    arr->capacity = 0;
+    arr->values = NULL;
+}
+
+static void writeIntArray(IntArray *arr, int i)
+{
+    if (arr->count == arr->capacity)
+    {
+        int oldCapacity = arr->capacity;
+        arr->capacity = GROW_CAPACITY(oldCapacity);
+        arr->values = GROW_ARRAY(int, arr->values, oldCapacity, arr->capacity);
+    }
+
+    arr->values[arr->count++] = i;
+}
+
+static void switchStatement()
+{
+    consume(TOKEN_LEFT_PAREN, "Expect '(' after 'switch'.");
+    expression();
+    consume(TOKEN_RIGHT_PAREN, "Expect ')' after switch expression.");
+
+    consume(TOKEN_LEFT_BRACE, "Expect '{'");
+
+    IntArray exitJumps;
+    initIntArray(&exitJumps);
+
+    while (match(TOKEN_CASE))
+    {
+        expression();
+
+        int thenJump = emitJump(OP_JUMP_IF_CASE_IS_FALSE);
+
+        consume(TOKEN_COLON, "Expect ':' after case expression.");
+        consume(TOKEN_LEFT_BRACE, "Expect '{'");
+
+        beginScope();
+        statement();
+        endScope();
+
+        consume(TOKEN_RIGHT_BRACE, "Expect '}'");
+        writeIntArray(&exitJumps, emitJump(OP_JUMP));
+        patchJump(thenJump);
+    }
+
+    if (match(TOKEN_DEFAULT))
+    {
+        consume(TOKEN_COLON, "Expect ':' after default.");
+        consume(TOKEN_LEFT_BRACE, "Expect '{'");
+        beginScope();
+        statement();
+        endScope();
+        consume(TOKEN_RIGHT_BRACE, "Expect '}'");
+    }
+    consume(TOKEN_RIGHT_BRACE, "Expect '}'");
+    consume(TOKEN_SEMICOLON, "Expect ';' after switch statement.");
+
+    for (int i = 0; i < exitJumps.count; i++)
+    {
+        patchJump(exitJumps.values[i]);
+    }
+
+    // clean up the switch expression from stack
+    emitByte(OP_POP);
+
+    FREE_ARRAY(int, exitJumps.values, exitJumps.capacity);
+}
+
 static void printStatement()
 {
     expression();
@@ -790,6 +868,10 @@ static void statement()
     else if (match(TOKEN_FOR))
     {
         forStatement();
+    }
+    else if (match(TOKEN_SWITCH))
+    {
+        switchStatement();
     }
     else if (match(TOKEN_LEFT_BRACE))
     {

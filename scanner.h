@@ -13,6 +13,7 @@ typedef enum
     TOKEN_MINUS,
     TOKEN_PLUS,
     TOKEN_SEMICOLON,
+    TOKEN_COLON,
     TOKEN_SLASH,
     TOKEN_STAR,
     // One or two character tokens.
@@ -45,6 +46,9 @@ typedef enum
     TOKEN_TRUE,
     TOKEN_VAR,
     TOKEN_WHILE,
+    TOKEN_SWITCH,
+    TOKEN_CASE,
+    TOKEN_DEFAULT,
 
     TOKEN_ERROR,
     TOKEN_EOF,

@@ -270,6 +270,17 @@ static InterpretResult run()
             vm.ip += offset;
             break;
         }
+        case OP_JUMP_IF_CASE_IS_FALSE:
+        {
+            uint16_t offset = READ_SHORT();
+            Value caseValue = pop();
+
+            if (!valuesEqual(peek(0), caseValue))
+            {
+                vm.ip += offset;
+            }
+            break;
+        }
         case OP_JUMP_IF_FALSE:
         {
             uint16_t offset = READ_SHORT();
