@@ -50,9 +50,37 @@ typedef struct
 typedef struct
 {
     Local locals[UINT8_COUNT];
+    int loops[UINT8_COUNT];
+    int loopCount;
     int localCount;
     int scopeDepth;
 } Compiler;
+
+typedef struct
+{
+    int count;
+    int capacity;
+    int *values;
+} IntArray;
+
+static void initIntArray(IntArray *arr)
+{
+    arr->count = 0;
+    arr->capacity = 0;
+    arr->values = NULL;
+}
+
+static void writeIntArray(IntArray *arr, int i)
+{
+    if (arr->count == arr->capacity)
+    {
+        int oldCapacity = arr->capacity;
+        arr->capacity = GROW_CAPACITY(oldCapacity);
+        arr->values = GROW_ARRAY(int, arr->values, oldCapacity, arr->capacity);
+    }
+
+    arr->values[arr->count++] = i;
+}
 
 const char *getPrecedenceName(Precedence precedence)
 {
@@ -236,6 +264,7 @@ static void initCompiler(Compiler *compiler)
 {
     compiler->localCount = 0;
     compiler->scopeDepth = 0;
+    compiler->loopCount = 0;
     current = compiler;
 }
 
@@ -663,6 +692,7 @@ static void forStatement()
     {
         int bodyJump = emitJump(OP_JUMP);
         int incrementStart = currentChunk()->count;
+        current->loops[current->loopCount++] = incrementStart;
         expression();
         emitByte(OP_POP);
         consume(TOKEN_RIGHT_PAREN, "Expect ')' after for clauses.");
@@ -704,32 +734,6 @@ static void ifStatement()
         statement();
     }
     patchJump(elseJump);
-}
-
-typedef struct
-{
-    int count;
-    int capacity;
-    int *values;
-} IntArray;
-
-static void initIntArray(IntArray *arr)
-{
-    arr->count = 0;
-    arr->capacity = 0;
-    arr->values = NULL;
-}
-
-static void writeIntArray(IntArray *arr, int i)
-{
-    if (arr->count == arr->capacity)
-    {
-        int oldCapacity = arr->capacity;
-        arr->capacity = GROW_CAPACITY(oldCapacity);
-        arr->values = GROW_ARRAY(int, arr->values, oldCapacity, arr->capacity);
-    }
-
-    arr->values[arr->count++] = i;
 }
 
 static void switchStatement()
@@ -794,6 +798,8 @@ static void printStatement()
 static void whileStatement()
 {
     int loopStart = currentChunk()->count;
+    current->loops[current->loopCount++] = loopStart;
+    printf("Loop int loops start: %d, loopStart: %d\n", current->loops[current->loopCount - 1], loopStart);
 
     consume(TOKEN_LEFT_PAREN, "Expect '(' after 'while'.");
     expression();
@@ -806,6 +812,18 @@ static void whileStatement()
 
     patchJump(exitJump);
     emitByte(OP_POP);
+    current->loopCount--;
+}
+
+static void continueStatement()
+{
+    consume(TOKEN_SEMICOLON, "Expect ';' after 'continue'.");
+    if (current->loopCount == 0)
+    {
+        error("'continue' can only be used inside a loop");
+    }
+    printf("Loop start: %d\n", current->loops[current->loopCount - 1]);
+    emitLoop(current->loops[current->loopCount - 1]);
 }
 
 static void synchronize()
@@ -868,6 +886,10 @@ static void statement()
     else if (match(TOKEN_FOR))
     {
         forStatement();
+    }
+    else if (match(TOKEN_CONTINUE))
+    {
+        continueStatement();
     }
     else if (match(TOKEN_SWITCH))
     {

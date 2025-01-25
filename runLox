@@ -2,5 +2,5 @@
 
 make
 echo "== Build success! =="
-valgrind --show-leak-kinds=all --show-reachable=yes --leak-resolution=high ./clox jau.lox
+valgrind --show-leak-kinds=all --show-reachable=yes --leak-resolution=high --track-origins=yes ./clox jau.lox
 make clean
