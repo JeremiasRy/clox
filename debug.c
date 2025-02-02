@@ -55,7 +55,15 @@ static int constantLongInstruction(const char *name, Chunk *chunk, int offset)
 int disassembleInstruction(Chunk *chunk, int offset)
 {
     printf("%04d ", offset);
-    printf("%4d ", getLine(chunk, offset));
+    if (offset > 0 &&
+        chunk->lines[offset] == chunk->lines[offset - 1])
+    {
+        printf("   | ");
+    }
+    else
+    {
+        printf("%4d ", chunk->lines[offset]);
+    }
 
     uint8_t instruction = chunk->code[offset];
 
@@ -113,6 +121,8 @@ int disassembleInstruction(Chunk *chunk, int offset)
         return jumpInstruction("OP_JUMP_IF_CASE_FALSE", 1, chunk, offset);
     case OP_LOOP:
         return jumpInstruction("OP_LOOP", -1, chunk, offset);
+    case OP_CALL:
+        return byteInstruction("OP_CALL", chunk, offset);
     default:
         printf("Unkown opcode %d\n", instruction);
         return offset + 1;

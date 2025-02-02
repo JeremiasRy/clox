@@ -3,7 +3,6 @@
 
 #include "common.h"
 #include "value.h"
-#include "rle.h"
 
 typedef enum
 {
@@ -32,6 +31,7 @@ typedef enum
     OP_JUMP_IF_FALSE,
     OP_JUMP_IF_CASE_IS_FALSE,
     OP_LOOP,
+    OP_CALL,
     OP_RETURN,
 } OpCode;
 
@@ -40,15 +40,13 @@ typedef struct
     int count;
     int capacity;
     uint8_t *code;
+    int *lines;
     ValueArray constants;
-    LineEntries lineEntries;
 } Chunk;
 
 void initChunk(Chunk *chunk);
 void freeChunk(Chunk *chunk);
 void writeChunk(Chunk *chunk, uint8_t byte, int line);
-void writeConstant(Chunk *chunk, Value value, int line);
-int getLine(Chunk *chunk, int index);
 int addConstant(Chunk *chunk, Value value);
 
 #endif

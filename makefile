@@ -1,18 +1,15 @@
 CC = gcc
-CFLAGS = -Wall -g
+CFLAGS = -g -fsanitize=address -fno-omit-frame-pointer -O3
 TARGET = clox
 
-SRCS = main.c chunk.c memory.c debug.c value.c rle.c vm.c compiler.c scanner.c object.c table.c
-OBJS = main.o chunk.o memory.o debug.o value.o rle.o vm.o compiler.o scanner.o object.o table.o
+SRCS = main.c chunk.c object.c memory.c debug.c value.c vm.c compiler.c scanner.c table.c
+OBJS = main.o chunk.o object.o memory.o debug.o value.o vm.o compiler.o scanner.o table.o
 
-# Rule to build the final executable
 $(TARGET): $(OBJS)
 	$(CC) $(CFLAGS) -o $(TARGET) $(OBJS)
 
-# Rule to build object files from source files
 %.o: %.c
 	$(CC) $(CFLAGS) -c $<
 
-# Clean rule to remove compiled files
 clean:
 	rm -f $(OBJS) $(TARGET)
