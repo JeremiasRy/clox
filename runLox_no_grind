@@ -1,6 +1,0 @@
-#!/bin/bash
-
-make
-echo "== Build success! =="
-./clox jau.lox
-make clean

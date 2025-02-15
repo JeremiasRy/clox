@@ -100,11 +100,9 @@ static bool callValue(Value callee, int argCount)
         }
         case OBJ_NATIVE:
         {
-            printf("Here??? callee = %d\n", callee);
+
             NativeFn native = AS_NATIVE(callee);
-            printf("we have the native %d\n", native);
             Value result = native(argCount, vm.stackTop - argCount);
-            printf("We called it\n");
             vm.stackTop -= argCount + 1;
             push(result);
             return true;
@@ -246,8 +244,6 @@ static InterpretResult run()
                 runtimeError("Undefined variable '%s'", name->chars);
                 return INTERPRET_RUNTIME_ERROR;
             }
-            printf("Tried to get %s\n", name->chars);
-            printf("%d\n", value.type);
             push(value);
             break;
         }
