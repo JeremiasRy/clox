@@ -1,9 +1,22 @@
-var x = "global";
-fun outer() {
-    var x = "outer";
-    fun inner() {
-        print x;
+var globalCount = 0;
+
+fun makeCounter() {
+    var cur = 0;
+    fun counter() {
+        cur = cur + 1;
+        globalCount = globalCount + 1
+        print cur;
     }
-    inner();
+
+    return counter;
 }
-outer();
+
+var counter_1 = makeCounter();
+var counter_2 = makeCounter();
+
+counter_1();
+counter_1();
+counter_2();
+counter_2();
+
+print globalCount;

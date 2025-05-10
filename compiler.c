@@ -16,7 +16,7 @@ typedef struct
     Token current;
     Token previous;
     bool hadError;
-    bool panickMode;
+    bool panicMode;
 } Parser;
 
 typedef enum
@@ -47,7 +47,14 @@ typedef struct
 {
     Token name;
     int depth;
+    bool isCaptured;
 } Local;
+
+typedef struct
+{
+    uint8_t index;
+    bool isLocal;
+} Upvalue;
 
 typedef enum
 {
@@ -55,7 +62,7 @@ typedef enum
     TYPE_SCRIPT
 } FunctionType;
 
-typedef struct
+typedef struct Compiler
 {
     struct Compiler *enclosing;
     ObjFunction *function;
@@ -65,6 +72,7 @@ typedef struct
     int loops[UINT8_COUNT];
     int loopCount;
     int localCount;
+    Upvalue upvalues[UINT8_COUNT];
     int scopeDepth;
 } Compiler;
 
@@ -135,11 +143,11 @@ static Chunk *currentChunk()
 
 static void errorAt(Token *token, const char *message)
 {
-    if (parser.panickMode)
+    if (parser.panicMode)
     {
         return;
     }
-    parser.panickMode = true;
+    parser.panicMode = true;
     fprintf(stderr, "[line %d] Error", token->line);
 
     if (token->type == TOKEN_EOF)
@@ -320,7 +328,14 @@ static void endScope()
 
     while (current->localCount > 0 && current->locals[current->localCount - 1].depth > current->scopeDepth)
     {
-        emitByte(OP_POP);
+        if (current->locals[current->localCount - 1].isCaptured)
+        {
+            emitByte(OP_CLOSE_UPVALUE);
+        }
+        else
+        {
+            emitByte(OP_POP);
+        }
         current->localCount--;
     }
 }
@@ -364,6 +379,51 @@ static int resolveLocal(Compiler *compiler, Token *name)
     return -1;
 }
 
+static int addUpValue(Compiler *compiler, uint8_t index, bool isLocal)
+{
+    int upvalueCount = compiler->function->upvalueCount;
+
+    for (int i = 0; i < upvalueCount; i++)
+    {
+        Upvalue *upvalue = &compiler->upvalues[i];
+        if (upvalue->index == index && upvalue->isLocal == isLocal)
+        {
+            return i;
+        }
+
+        if (upvalueCount == UINT8_COUNT)
+        {
+            error("Too many closure variables in function.");
+            return 0;
+        }
+    }
+
+    compiler->upvalues[upvalueCount].isLocal = isLocal;
+    compiler->upvalues[upvalueCount].index = index;
+    return compiler->function->upvalueCount++;
+}
+
+static int resolveUpvalue(Compiler *compiler, Token *name)
+{
+    if (compiler->enclosing == NULL)
+        return -1;
+
+    int local = resolveLocal(compiler->enclosing, name);
+    if (local != -1)
+    {
+        compiler->enclosing->locals[local].isCaptured = true;
+        return addUpValue(compiler, (uint8_t)local, true);
+    }
+
+    int upvalue = resolveUpvalue(compiler->enclosing, name);
+    if (upvalue != -1)
+    {
+        return addUpValue(compiler, (uint8_t)upvalue, false);
+    }
+
+    return -1;
+}
+
 static void addLocal(Token name)
 {
     if (current->localCount == UINT8_COUNT)
@@ -374,6 +434,7 @@ static void addLocal(Token name)
     Local *local = &current->locals[current->localCount++];
     local->name = name;
     local->depth = current->scopeDepth;
+    local->isCaptured = false;
 }
 
 static void declareVariable()
@@ -556,6 +617,11 @@ static void namedVariable(Token name, bool canAssign)
         getOp = OP_GET_LOCAL;
         setOp = OP_SET_LOCAL;
     }
+    else if ((arg = resolveUpvalue(current, &name)) != -1)
+    {
+        getOp = OP_GET_UPVALUE;
+        setOp = OP_SET_UPVALUE;
+    }
     else
     {
         arg = identifierConstant(&name);
@@ -718,7 +784,13 @@ static void function(FunctionType type)
     block();
 
     ObjFunction *function = endCompiler();
-    emitBytes(OP_CONSTANT, makeConstant(OBJ_VAL(function)));
+    emitBytes(OP_CLOSURE, makeConstant(OBJ_VAL(function)));
+
+    for (int i = 0; i < function->upvalueCount; i++)
+    {
+        emitByte(compiler.upvalues[i].isLocal ? 1 : 0);
+        emitByte(compiler.upvalues[i].index);
+    }
 }
 
 static void funDeclaration()
@@ -943,7 +1015,7 @@ static void continueStatement()
 
 static void synchronize()
 {
-    parser.panickMode = false;
+    parser.panicMode = false;
 
     while (parser.current.type != TOKEN_EOF)
     {
@@ -983,7 +1055,7 @@ static void declaration()
         statement();
     }
 
-    if (parser.panickMode)
+    if (parser.panicMode)
     {
         synchronize();
     }
@@ -1038,12 +1110,15 @@ ObjFunction *compile(const char *source)
     initCompiler(&compiler, TYPE_SCRIPT);
 
     parser.hadError = false;
-    parser.panickMode = false;
+    parser.panicMode = false;
+
     advance();
+
     while (!match(TOKEN_EOF))
     {
         declaration();
     }
+
     ObjFunction *function = endCompiler();
     return parser.hadError ? NULL : function;
 }
