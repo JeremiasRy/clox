@@ -21,7 +21,7 @@ typedef enum
     OP_GREATER,
     OP_LESS,
     OP_ADD,
-    OP_SUBSTRACT,
+    OP_SUBTRACT,
     OP_MULTIPLY,
     OP_DIVIDE,
     OP_NOT,
@@ -35,6 +35,14 @@ typedef enum
     OP_CLOSURE,
     OP_CLOSE_UPVALUE,
     OP_RETURN,
+    OP_CLASS,
+    OP_INHERIT,
+    OP_GET_SUPER,
+    OP_SUPER_INVOKE,
+    OP_GET_PROPERTY,
+    OP_SET_PROPERTY,
+    OP_METHOD,
+    OP_INVOKE
 } OpCode;
 
 typedef struct

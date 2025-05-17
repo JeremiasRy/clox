@@ -30,7 +30,7 @@ static bool compareKeys(ObjString *a, ObjString *b)
 
 static Entry *findEntry(Entry *entries, int capacity, ObjString *key)
 {
-    uint32_t index = key->hash % capacity;
+    uint32_t index = key->hash & (capacity - 1);
     Entry *tombstone = NULL;
     for (;;)
     {
@@ -54,7 +54,7 @@ static Entry *findEntry(Entry *entries, int capacity, ObjString *key)
             return entry;
         }
 
-        index = (index + 1) % capacity;
+        index = (index + 1) & (capacity - 1);
     }
 }
 
